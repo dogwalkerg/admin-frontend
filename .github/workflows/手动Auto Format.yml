@@ -1,0 +1,99 @@
+name: 手动Auto Format
+
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+  workflow_dispatch:  # 添加手动触发
+    inputs:
+      pull_request_number:
+        description: 'PR 编号（可选，用于在现有 PR 上运行）'
+        required: false
+        type: string
+
+jobs:
+  auto-fix:
+    if: github.actor != 'weblate'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 获取 PR 信息（手动触发时）
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v7
+        id: get_pr_info
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            if ('${{ github.event.inputs.pull_request_number }}') {
+              try {
+                const pr = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: '${{ github.event.inputs.pull_request_number }}'
+                });
+                return {
+                  head_ref: pr.data.head.ref,
+                  head_repo: pr.data.head.repo.full_name
+                };
+              } catch (error) {
+                console.log('未找到 PR，将在当前分支运行');
+                return { head_ref: null, head_repo: null };
+              }
+            }
+            return { head_ref: null, head_repo: null };
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # 根据触发类型选择不同的 ref
+          ref: ${{ github.event_name == 'workflow_dispatch' && (steps.get_pr_info.outputs.head_ref || github.ref) || github.head_ref }}
+          repository: ${{ github.event_name == 'workflow_dispatch' && (steps.get_pr_info.outputs.head_repo || github.repository) || github.event.pull_request.head.repo.full_name }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "latest"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run formatter
+        run: bun run format
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.has_changes == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: auto-fix formatting issues"
+          commit_options: "--no-verify"
+          file_pattern: ":(exclude).github/workflows/*"  # 排除工作流文件避免权限问题
+
+      - name: Add PR comment (PR 触发时)
+        if: github.event_name == 'pull_request_target' && steps.check_changes.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🎨 代码格式问题已自动修复。请检查变更内容。'
+            });
+
+      - name: 输出手动触发结果
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ steps.check_changes.outputs.has_changes }}" = "true" ]; then
+            echo "✅ 已成功修复代码格式问题并提交"
+          else
+            echo "ℹ️ 代码格式良好，无需修复"
+          fi
