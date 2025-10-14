@@ -1,0 +1,63 @@
+name: 发布Build and release static export
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:  # 添加手动触发
+    inputs:
+      version:
+        description: '版本号（例如：v1.0.0）'
+        required: true
+        type: string
+      skip_tag:
+        description: '跳过创建 Git 标签'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 创建 Git 标签（手动触发时）
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.skip_tag == false
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag ${{ github.event.inputs.version }}
+          git push origin ${{ github.event.inputs.version }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "latest"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build static export
+        run: |
+          bun run build-ignore-error
+
+      - name: Compress dist folder
+        run: zip -r dist.zip dist
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist.zip
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}
+          name: Release ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}
+
+      - name: Changelog
+        run: bun x changelogithub
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
