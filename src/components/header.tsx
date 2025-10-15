@@ -393,7 +393,7 @@ function Overview() {
             {profile && (
                 <div className="flex items-center gap-1.5">
                     <div className="flex gap-1.5 text-sm font-semibold">
-                        👋 Hi, {profile?.username}
+                        🚀 保持心情愉快, {profile?.username}
                         {profile?.login_ip && (
                             <p className="font-medium opacity-45">from {profile?.login_ip}</p>
                         )}
