@@ -79,7 +79,7 @@ export default function Header() {
                             },
                         )}
                         alt={"animated-man"}
-                        src={"/dashboard/animated-man.webp"}
+                        src={"/dashboard/animated-man.gif"}
                     />
                 )}
                 <section className="w-full flex items-center  justify-between">
