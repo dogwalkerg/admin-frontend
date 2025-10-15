@@ -7,7 +7,7 @@ on:
   workflow_dispatch:  # 添加手动触发
     inputs:
       version:
-        description: '版本号（例如：v1.0.0）'
+        description: '版本号（例如：v1.14.4）'
         required: true
         type: string
       skip_tag:
