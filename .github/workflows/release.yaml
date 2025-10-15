@@ -1,4 +1,4 @@
-name: 0Build and release static export
+name: Build and release static export
 
 on:
     push:
