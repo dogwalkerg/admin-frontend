@@ -1,5 +1,5 @@
 {
-    "nezha": "哪吒监控",
+    "nezha": "主管理",
     "theme": {
         "light": "亮色",
         "dark": "暗色",
@@ -9,7 +9,7 @@
     "Password": "密码",
     "InvalidUsernameOrPassword": "用户名或密码错误",
     "NetworkError": "网络错误",
-    "LoginFirst": "请先登录",
+    "LoginFirst": "美好的一天",
     "CurrentTime": "当前时间",
     "Results": {
         "UsernameMin": "用户名必须至少有 {{number}} 个字符。",
